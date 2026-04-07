@@ -288,11 +288,13 @@ GET /api/search?keyword=000001
   "data": [
     {
       "code": "000001",
-      "name": "平安银行"
+      "name": "平安银行",
+      "exchange": "sz"
     },
     {
       "code": "601318",
-      "name": "中国平安"
+      "name": "中国平安",
+      "exchange": "sh"
     }
     // ... 最多50条结果
   ]
@@ -453,6 +455,31 @@ GET /api/kline-history?code=000001&type=day&limit=30
 GET /api/kline-history?code=000001&type=day&start_date=20241001&end_date=20241101
 ```
 
+**响应示例**:
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "Count": 30,
+    "List": [
+      {
+        "Last": 12250,
+        "Open": 12300,
+        "High": 12600,
+        "Low": 12280,
+        "Close": 12500,
+        "Volume": 1235000,
+        "Amount": 156000000,
+        "Time": "2024-11-03T00:00:00Z",
+        "UpCount": 0,
+        "DownCount": 0
+      }
+    ]
+  }
+}
+```
+
 ---
 
 ### 10. 获取指数数据
@@ -476,6 +503,31 @@ GET /api/kline-history?code=000001&type=day&start_date=20241001&end_date=2024110
 **请求示例**:
 ```
 GET /api/index?code=sh000001&type=day
+```
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "Count": 100,
+    "List": [
+      {
+        "Last": 3123450,
+        "Open": 3130000,
+        "High": 3142000,
+        "Low": 3118000,
+        "Close": 3135600,
+        "Volume": 456789000,
+        "Amount": 1234567890000,
+        "Time": "2024-11-08T00:00:00Z",
+        "UpCount": 3210,
+        "DownCount": 1987
+      }
+    ]
+  }
+}
 ```
 
 ---
@@ -637,6 +689,11 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 - `failed`：执行失败，`error` 字段包含原因
 - `cancelled`：已取消
 
+**返回结构说明**:
+- `GET /api/tasks` 返回 `data: []`，数组元素为任务对象
+- `GET /api/tasks/{task_id}` 返回 `data: {}`，单个任务对象
+- `POST /api/tasks/{task_id}/cancel` 返回 `data: { "task_id": "...", "status": "cancelled" }`
+
 **响应示例** (`GET /api/tasks/{task_id}`):
 ```json
 {
@@ -692,7 +749,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 16. 获取历史分时成交（分页）
+### 17. 获取历史分时成交（分页）
 
 **接口**: `GET /api/trade-history`
 
@@ -715,10 +772,11 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
     "Count": 2000,
     "List": [
       {
-        "Price": 12345,
         "Time": "2024-11-08T14:58:00+08:00",
+        "Price": 12345,
+        "Volume": 50,
         "Status": 0,
-        "Volume": 50
+        "Number": 0
       }
     ]
   }
@@ -727,7 +785,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 17. 获取全天分时成交
+### 18. 获取全天分时成交
 
 **接口**: `GET /api/minute-trade-all`
 
@@ -748,10 +806,11 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
     "Count": 3150,
     "List": [
       {
-        "Price": 12500,
         "Time": "2024-11-08T09:30:01+08:00",
+        "Price": 12500,
         "Volume": 10,
-        "Status": 0
+        "Status": 0,
+        "Number": 3
       }
     ]
   }
@@ -760,7 +819,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 18. 查询交易日信息
+### 19. 查询交易日信息
 
 **接口**: `GET /api/workday`
 
@@ -801,7 +860,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 19. 获取市场证券数量
+### 20. 获取市场证券数量
 
 **接口**: `GET /api/market-count`
 
@@ -825,7 +884,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 20. 获取股票代码列表
+### 21. 获取股票代码列表
 
 **接口**: `GET /api/stock-codes`
 
@@ -855,7 +914,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 21. 获取ETF代码列表
+### 22. 获取ETF代码列表
 
 **接口**: `GET /api/etf-codes`
 
@@ -878,7 +937,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 22. 获取股票全部历史K线
+### 23. 获取股票全部历史K线
 
 **接口**: `GET /api/kline-all`
 
@@ -893,9 +952,42 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 **注意**: 全量数据较大，建议配合 `limit` 控制响应大小。
 
+**响应示例**:
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "count": 4100,
+    "list": [
+      {
+        "Last": 12250,
+        "Open": 12300,
+        "High": 12600,
+        "Low": 12280,
+        "Close": 12500,
+        "Volume": 1235000,
+        "Amount": 156000000,
+        "Time": "2024-11-03T00:00:00Z",
+        "UpCount": 0,
+        "DownCount": 0
+      }
+    ],
+    "meta": {
+      "source": "tdx",
+      "type": "day",
+      "batch_limit": 800,
+      "notes": [
+        "通达信单次底层请求最多返回 800 条数据，服务端已顺序拼接全量结果"
+      ]
+    }
+  }
+}
+```
+
 ---
 
-### 23. 获取指数全部历史K线
+### 24. 获取指数全部历史K线
 
 **接口**: `GET /api/index/all`
 
@@ -903,9 +995,34 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 **请求参数**与 `/api/kline-all` 相同。
 
+**响应示例**:
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "count": 5200,
+    "list": [
+      {
+        "Last": 3123450,
+        "Open": 3130000,
+        "High": 3142000,
+        "Low": 3118000,
+        "Close": 3135600,
+        "Volume": 456789000,
+        "Amount": 1234567890000,
+        "Time": "2024-11-08T00:00:00Z",
+        "UpCount": 3210,
+        "DownCount": 1987
+      }
+    ]
+  }
+}
+```
+
 ---
 
-### 24. 获取上市以来分时成交
+### 25. 获取上市以来分时成交
 
 **接口**: `GET /api/trade-history/full`
 
@@ -916,11 +1033,40 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 |------|------|------|------|
 | code | string | 是 | 股票代码 |
 | before | string | 否 | 截止日期（YYYYMMDD 或 YYYY-MM-DD），默认今日 |
+| start_date | string | 否 | 起始日期（YYYYMMDD 或 YYYY-MM-DD），默认最近30天 |
+| end_date | string | 否 | 结束日期（YYYYMMDD 或 YYYY-MM-DD），与 `before` 二选一 |
+| include_today | bool | 否 | 是否拼接当天实时成交，默认 false |
 | limit | int | 否 | 返回条数限制（从最近开始截取） |
+
+**响应示例**:
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "code": "000001",
+    "start_date": "2024-10-01",
+    "end_date": "2024-11-08",
+    "limit": 1000,
+    "count": 1000,
+    "truncated": true,
+    "covered_dates": ["20241106", "20241107", "20241108"],
+    "list": [
+      {
+        "time": "2024-11-08T14:58:00+08:00",
+        "price": 12.345,
+        "volume": 50,
+        "status": 0,
+        "number": 3
+      }
+    ]
+  }
+}
+```
 
 ---
 
-### 25. 获取交易日范围
+### 26. 获取交易日范围
 
 **接口**: `GET /api/workday/range`
 
@@ -932,9 +1078,30 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 | start | string | 是 | 起始日期（YYYYMMDD 或 YYYY-MM-DD） |
 | end | string | 是 | 结束日期（YYYYMMDD 或 YYYY-MM-DD） |
 
+**响应示例**:
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "count": 5,
+    "list": [
+      {
+        "iso": "2024-11-04",
+        "numeric": "20241104"
+      },
+      {
+        "iso": "2024-11-05",
+        "numeric": "20241105"
+      }
+    ]
+  }
+}
+```
+
 ---
 
-### 26. 计算收益区间指标
+### 27. 计算收益区间指标
 
 **接口**: `GET /api/income`
 
@@ -960,8 +1127,8 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
         "time": "2024-11-15T15:00:00+08:00",
         "rise": 350.0,
         "rise_rate": 0.0285,
-        "source": { "close": 12250.0, "open": 12300.0, "...": 0 },
-        "current": { "close": 12580.0, "open": 12600.0, "...": 0 }
+        "source": { "open": 12300.0, "high": 12600.0, "low": 12280.0, "close": 12250.0 },
+        "current": { "open": 12600.0, "high": 12750.0, "low": 12520.0, "close": 12580.0 }
       }
     ]
   }
@@ -1203,7 +1370,6 @@ curl -X POST http://localhost:8080/api/batch-quote \
 | -1 | 股票代码不能为空 | 缺少必填参数code |
 | -1 | 获取行情失败: xxx | 数据获取失败，xxx为具体错误 |
 | -1 | 获取K线失败: xxx | K线数据获取失败 |
-| -1 | 未找到相关股票 | 搜索无结果 |
 | -1 | 搜索关键词不能为空 | 缺少keyword参数 |
 
 ---

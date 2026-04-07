@@ -108,10 +108,38 @@ func handleGetKlineHistory(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	klineType := r.URL.Query().Get("type")
 	limitStr := r.URL.Query().Get("limit")
+	startDateStr := strings.TrimSpace(r.URL.Query().Get("start_date"))
+	endDateStr := strings.TrimSpace(r.URL.Query().Get("end_date"))
 
 	if code == "" {
 		errorResponse(w, "股票代码不能为空")
 		return
+	}
+
+	var (
+		startDate time.Time
+		endDate   time.Time
+		err       error
+	)
+
+	if startDateStr != "" {
+		startDate, err = parseWorkdayDate(startDateStr)
+		if err != nil {
+			errorResponse(w, "start_date 参数格式错误，应为 YYYYMMDD 或 YYYY-MM-DD")
+			return
+		}
+	}
+
+	if endDateStr != "" {
+		endDate, err = parseWorkdayDate(endDateStr)
+		if err != nil {
+			errorResponse(w, "end_date 参数格式错误，应为 YYYYMMDD 或 YYYY-MM-DD")
+			return
+		}
+	}
+
+	if !startDate.IsZero() && !endDate.IsZero() && startDate.After(endDate) {
+		startDate, endDate = endDate, startDate
 	}
 
 	// 解析limit，默认100，最大800
@@ -126,7 +154,6 @@ func handleGetKlineHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resp *protocol.KlineResp
-	var err error
 
 	switch klineType {
 	case "minute1":
@@ -178,7 +205,44 @@ func handleGetKlineHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp = filterKlineHistoryByDateRange(resp, startDate, endDate)
+
+	if len(resp.List) > int(limit) {
+		resp.List = resp.List[len(resp.List)-int(limit):]
+		resp.Count = limit
+	}
+
 	successResponse(w, resp)
+}
+
+func filterKlineHistoryByDateRange(resp *protocol.KlineResp, startDate, endDate time.Time) *protocol.KlineResp {
+	if resp == nil || len(resp.List) == 0 {
+		return resp
+	}
+	if startDate.IsZero() && endDate.IsZero() {
+		return resp
+	}
+
+	filtered := make([]*protocol.Kline, 0, len(resp.List))
+	for _, item := range resp.List {
+		if item == nil {
+			continue
+		}
+
+		itemDate := time.Date(item.Time.Year(), item.Time.Month(), item.Time.Day(), 0, 0, 0, 0, time.Local)
+		if !startDate.IsZero() && itemDate.Before(startDate) {
+			continue
+		}
+		if !endDate.IsZero() && itemDate.After(endDate) {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+
+	return &protocol.KlineResp{
+		Count: uint16(len(filtered)),
+		List:  filtered,
+	}
 }
 
 // 获取指数数据

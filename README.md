@@ -60,7 +60,7 @@ go run .
 
 ---
 
-## � API 接口列表
+## API 接口列表
 
 ### 核心接口
 
@@ -106,7 +106,7 @@ go run .
 
 ---
 
-## � 使用示例
+## 使用示例
 
 ### API 调用
 
@@ -141,7 +141,7 @@ kline, _ := c.GetKlineDayAll("000001")
 
 ---
 
-## � Docker 配置说明
+## Docker 配置说明
 
 ### 国内镜像加速
 
@@ -200,7 +200,27 @@ tdx-api/
 
 ---
 
-## � 相关资源
+## Skill 使用
+
+仓库内提供了一个面向 API 文档问答的 skill：
+
+- Skill 路径：`skills/tdx-api-docs/SKILL.md`
+- 适用场景：查询接口是否已实现、参数含义、返回结构、字段单位、HTTP/WebSocket 调用示例
+- 校验顺序：优先看 `API_接口文档.md`，再回查 `web/server.go`、`web/server_api_extended.go`、`web/server_ws.go`
+
+在支持 skill 的 Codex 环境里，可以直接这样使用：
+
+```text
+用 tdx-api-docs 看一下 /api/kline-history 的返回结构
+帮我确认 /ws/quote 是否已经实现
+解释一下 /api/trade-history/full 的字段含义
+```
+
+这个 skill 的目标是让 API 对接时优先以当前代码行为为准，减少文档和实现不一致带来的误判。
+
+---
+
+## 相关资源
 
 | 资源        | 链接                                          |
 | ----------- | --------------------------------------------- |
@@ -208,6 +228,7 @@ tdx-api/
 | API 文档    | [API\_接口文档.md](API_接口文档.md)           |
 | Docker 部署 | [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md)          |
 | Python 示例 | [API\_使用示例.py](API_使用示例.py)           |
+| API Skill   | [skills/tdx-api-docs/SKILL.md](skills/tdx-api-docs/SKILL.md) |
 
 ### 通达信服务器
 
