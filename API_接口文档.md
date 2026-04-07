@@ -2,7 +2,8 @@
 
 ## 🌐 基础信息
 
-**Base URL**: `http://your-server:8080`  
+**HTTP Base URL**: `http://your-server:8080`  
+**WebSocket Base URL**: `ws://your-server:8080`  
 **Content-Type**: `application/json; charset=utf-8`  
 **编码**: UTF-8
 
@@ -98,8 +99,7 @@ GET /api/quote?code=000001,600519
 
 **接口**: `GET /api/kline`
 
-**描述**: 获取股票K线数据（OHLC + 成交量成交额）。日/周/月K线默认返回同花顺前复权数据；若第三方源不可用将直接返回错误提示，不再自动切换通达信源。需要原始数据或自行设置兜底时，可调用文末的 `/api/kline-all/tdx` 等接口。
-**描述**: 获取股票K线数据（OHLC + 成交量成交额）。日/周/月K线优先返回同花顺前复权数据，若第三方源不可用则自动回退到通达信原始数据；分钟级及小时级为原始数据。
+**描述**: 获取股票K线数据（OHLC + 成交量成交额）。日/周/月K线返回同花顺前复权数据；若第三方源不可用将直接返回错误提示，不再自动回退通达信原始数据。分钟级及小时级返回通达信原始数据；若需要全量原始K线，可调用文末的 `/api/kline-all/tdx` 等接口。
 
 **请求参数**:
 | 参数 | 类型 | 必填 | 说明 |
@@ -162,7 +162,6 @@ GET /api/kline?code=600519&type=minute30
 **接口**: `GET /api/minute`
 
 **描述**: 获取股票分时走势数据。接口严格按照请求日期返回结果，不再自动回退其他交易日；若指定日期无数据，将返回空列表并保留原日期。
-**描述**: 获取股票分时走势数据；若查询日期或当日无数据，会自动回退至最近一个有交易数据的工作日，并在响应体中附加实际数据日期。
 
 **请求参数**:
 | 参数 | 类型 | 必填 | 说明 |
@@ -183,7 +182,6 @@ GET /api/minute?code=000001&date=20241103
   "message": "success",
   "data": {
     "date": "20251110",   // 实际数据日期，与请求日期一致
-    "date": "20251107",   // 实际数据日期，可能与请求日期不同
     "Count": 240,
     "List": [
       {
@@ -346,7 +344,6 @@ GET /api/stock-info?code=000001
 **数据说明**:
 - 整合了五档行情、最近30条日K线、最新分时数据
 - 分时数据自带 `date`、`Count`、`List` 字段；若 `List` 为空表示该日期无分时数据
-- 分时数据自带 `date`、`Count`、`List` 字段，便于识别回退日期
 - 适合快速获取股票概览，减少API调用次数
 
 ---
@@ -497,7 +494,7 @@ GET /api/index?code=sh000001&type=day
   "data": {
     "status": "running",
     "connected": true,
-    "version": "1.0.0",
+    "version": "1.1.0",
     "uptime": "unknown"
   }
 }
@@ -505,7 +502,56 @@ GET /api/index?code=sh000001&type=day
 
 ---
 
-### 12. 创建批量K线入库任务
+### 12. WebSocket 实时行情推送
+
+**接口**: `GET /ws/quote`（WebSocket）
+
+**描述**: 建立 WebSocket 连接后，服务器会先立即推送一次最新五档行情，之后按照固定间隔持续推送。
+
+**请求参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| code | string | 是 | 股票代码，支持多个，逗号分隔 |
+| interval | int | 否 | 推送间隔（秒），默认 `3`，最大 `60` |
+
+**连接示例**:
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws/quote?code=000001,600519&interval=3');
+
+ws.onmessage = (event) => {
+  const payload = JSON.parse(event.data);
+  console.log(payload);
+};
+```
+
+**消息示例**:
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "type": "quote",
+    "codes": ["000001", "600519"],
+    "interval": 3,
+    "timestamp": "2026-04-07T15:04:05+08:00",
+    "quotes": [
+      {
+        "Code": "000001",
+        "ServerTime": "1730617200"
+      }
+    ]
+  }
+}
+```
+
+**数据说明**:
+- 建连成功后会立即下发一帧行情数据，无需等待首个定时周期
+- 后续按 `interval` 周期持续推送
+- 若服务端拉取行情失败，会推送 `code = -1` 的错误消息并附带本次订阅上下文
+
+---
+
+### 13. 创建批量K线入库任务
 
 **接口**: `POST /api/tasks/pull-kline`
 
@@ -548,7 +594,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-kline \
 
 ---
 
-### 13. 创建分时成交入库任务
+### 14. 创建分时成交入库任务
 
 **接口**: `POST /api/tasks/pull-trade`
 
@@ -577,7 +623,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 14. 查询与控制任务
+### 15. 查询与控制任务
 
 | 接口 | 方法 | 描述 |
 |------|------|------|
@@ -607,7 +653,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 
 ---
 
-### 15. 获取ETF列表
+### 16. 获取ETF列表
 
 **接口**: `GET /api/etf`
 
@@ -1197,11 +1243,12 @@ curl -X POST http://localhost:8080/api/batch-quote \
 - ✅ 统一响应格式
 - ✅ 完整文档和示例
 
-### v1.1.0 (计划中)
-- 🔄 批量查询接口
-- 🔄 历史K线范围查询
-- 🔄 指数数据接口
-- 🔄 WebSocket实时推送
+### v1.1.0 (2026-04-07)
+- ✅ 新增批量行情接口 `/api/batch-quote`
+- ✅ 新增历史K线范围查询 `/api/kline-history`
+- ✅ 新增指数接口 `/api/index`
+- ✅ 新增 WebSocket 实时行情推送 `/ws/quote`
+- ✅ 修正文档中关于 K 线、分时、服务版本的描述
 
 ---
 
@@ -1214,4 +1261,3 @@ curl -X POST http://localhost:8080/api/batch-quote \
 ---
 
 **Happy Coding!** 🎉
-

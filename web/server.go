@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/injoyai/tdx"
@@ -20,45 +21,52 @@ var (
 	client      *tdx.Client
 	manager     *tdx.Manage
 	taskManager = NewTaskManager()
+	initOnce    sync.Once
+	initErr     error
 )
 
-func init() {
-	var err error
-	// 连接通达信服务器
-	client, err = tdx.DialDefault(tdx.WithDebug(false))
-	if err != nil {
-		log.Fatalf("连接服务器失败: %v", err)
-	}
-	log.Println("成功连接到通达信服务器")
+func initializeGlobals() error {
+	initOnce.Do(func() {
+		var err error
 
-	// 初始化代码缓存
-	if err = os.MkdirAll(tdx.DefaultDatabaseDir, 0755); err != nil {
-		log.Printf("创建数据目录失败: %v", err)
-	}
-	if codes, err := tdx.NewCodesSqlite(client); err != nil {
-		log.Printf("初始化代码库失败: %v", err)
-	} else {
-		tdx.DefaultCodes = codes
-		if err := tdx.DefaultCodes.Update(); err != nil {
-			log.Printf("更新代码库失败: %v", err)
-		} else {
-			log.Printf("已加载股票代码，共 %d 条", len(tdx.DefaultCodes.Map))
+		client, err = tdx.DialDefault(tdx.WithDebug(false))
+		if err != nil {
+			initErr = fmt.Errorf("连接服务器失败: %w", err)
+			return
 		}
-	}
+		log.Println("成功连接到通达信服务器")
 
-	manager, err = tdx.NewManage(&tdx.ManageConfig{
-		Number: 4,
+		if err = os.MkdirAll(tdx.DefaultDatabaseDir, 0755); err != nil {
+			log.Printf("创建数据目录失败: %v", err)
+		}
+		if codes, err := tdx.NewCodesSqlite(client); err != nil {
+			log.Printf("初始化代码库失败: %v", err)
+		} else {
+			tdx.DefaultCodes = codes
+			if err := tdx.DefaultCodes.Update(); err != nil {
+				log.Printf("更新代码库失败: %v", err)
+			} else {
+				log.Printf("已加载股票代码，共 %d 条", len(tdx.DefaultCodes.Map))
+			}
+		}
+
+		manager, err = tdx.NewManage(&tdx.ManageConfig{
+			Number: 4,
+		})
+		if err != nil {
+			initErr = fmt.Errorf("初始化数据管理器失败: %w", err)
+			return
+		}
+		if err := manager.Codes.Update(); err != nil {
+			log.Printf("更新管理器代码库失败: %v", err)
+		}
+		if err := manager.Workday.Update(); err != nil {
+			log.Printf("更新交易日数据失败: %v", err)
+		}
+		manager.Cron.Start()
 	})
-	if err != nil {
-		log.Fatalf("初始化数据管理器失败: %v", err)
-	}
-	if err := manager.Codes.Update(); err != nil {
-		log.Printf("更新管理器代码库失败: %v", err)
-	}
-	if err := manager.Workday.Update(); err != nil {
-		log.Printf("更新交易日数据失败: %v", err)
-	}
-	manager.Cron.Start()
+
+	return initErr
 }
 
 // Response 统一响应结构
@@ -705,6 +713,10 @@ func getMinuteWithFallback(code, date string) (*protocol.MinuteResp, string, err
 }
 
 func main() {
+	if err := initializeGlobals(); err != nil {
+		log.Fatal(err)
+	}
+
 	// 静态文件服务
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
@@ -736,6 +748,7 @@ func main() {
 	http.HandleFunc("/api/workday", handleGetWorkday)
 	http.HandleFunc("/api/workday/range", handleGetWorkdayRange)
 	http.HandleFunc("/api/income", handleGetIncome)
+	http.HandleFunc("/ws/quote", handleQuoteWebSocket)
 	http.HandleFunc("/api/tasks/pull-kline", handleCreatePullKlineTask)
 	http.HandleFunc("/api/tasks/pull-trade", handleCreatePullTradeTask)
 	http.HandleFunc("/api/tasks", handleListTasks)

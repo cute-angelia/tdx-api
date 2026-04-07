@@ -874,7 +874,7 @@ func handleGetServerStatus(w http.ResponseWriter, r *http.Request) {
 	status := &ServerStatus{
 		Status:    "running",
 		Connected: true,
-		Version:   "1.0.0",
+		Version:   "1.1.0",
 		Uptime:    "unknown",
 	}
 
