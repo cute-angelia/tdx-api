@@ -11,9 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write
     env:
       MM_NOTIFY_URL: ${{ secrets.MM_NOTIFY_URL }}
       REPOSITORY: ${{ github.repository }}
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
 
     steps:
       - name: Checkout repository
@@ -22,13 +24,30 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          push: false
-          tags: tdx-api:ci
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -36,7 +55,7 @@ jobs:
         run: |
           if [ -n "$MM_NOTIFY_URL" ]; then
             curl -H 'Content-Type: application/json' \
-              -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"镜像发布成功 $REPOSITORY\"}}" \
+              -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"镜像发布成功 $REPOSITORY ${GITHUB_REF_NAME}\"}}" \
               "$MM_NOTIFY_URL"
           else
             echo 'MM_NOTIFY_URL not set'
