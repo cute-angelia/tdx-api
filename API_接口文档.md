@@ -2,10 +2,14 @@
 
 ## 🌐 基础信息
 
-**HTTP Base URL**: `http://your-server:8080`  
-**WebSocket Base URL**: `ws://your-server:8080`  
+**HTTP Base URL**: `http://${ENV_TDX_API_HOST}:${ENV_TDX_API_PORT}`  
+**WebSocket Base URL**: `ws://${ENV_TDX_API_HOST}:${ENV_TDX_API_PORT}`  
 **Content-Type**: `application/json; charset=utf-8`  
 **编码**: UTF-8
+
+**服务监听环境变量**:
+- `ENV_TDX_API_HOST`：监听地址，默认 `localhost`
+- `ENV_TDX_API_PORT`：监听端口，默认 `8080`
 
 ---
 
@@ -1144,7 +1148,7 @@ curl -X POST http://localhost:8080/api/tasks/pull-trade \
 ```python
 import requests
 
-BASE_URL = "http://your-server:8080"
+BASE_URL = "http://localhost:8080"
 
 # 1. 获取五档行情
 def get_quote(code):
@@ -1191,7 +1195,7 @@ if __name__ == "__main__":
 ### JavaScript示例
 
 ```javascript
-const BASE_URL = 'http://your-server:8080';
+const BASE_URL = 'http://localhost:8080';
 
 // 1. 获取五档行情
 async function getQuote(code) {

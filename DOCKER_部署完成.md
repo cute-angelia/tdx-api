@@ -182,12 +182,12 @@ docker-compose logs -f
 看到以下信息表示成功：
 ```
 成功连接到通达信服务器
-服务启动成功，访问 http://localhost:8080
+服务启动成功，监听 :8080
 ```
 
 ### 步骤5: 访问应用
 
-打开浏览器访问: **http://localhost:8080**
+默认打开浏览器访问: **http://localhost:8080**
 
 🎉 **完成！开始使用吧！**
 
@@ -215,7 +215,7 @@ docker-compose logs -f
    - 最终大小约20MB
 
 5. 🚀 启动容器
-   - 映射8080端口
+   - 默认映射8080端口，可通过 `ENV_TDX_API_PORT` 覆盖
    - 配置健康检查
    - 后台运行
 
@@ -280,7 +280,9 @@ bind: Only one usage of each socket address
 ```powershell
 # 方法1: 修改docker-compose.yml
 ports:
-  - "9090:8080"  # 改用9090端口
+  - "9090:9090"  # 改用9090端口
+environment:
+  - ENV_TDX_API_PORT=9090
 
 # 方法2: 停止占用8080的程序
 netstat -ano | findstr :8080
@@ -298,7 +300,9 @@ docker ps
 docker logs tdx-stock-web
 
 # 3. 测试容器内服务
-docker exec tdx-stock-web wget -O- http://localhost:8080
+docker exec tdx-stock-web wget -O- http://localhost:${ENV_TDX_API_PORT:-8080}
+
+说明：服务端默认 `ENV_TDX_API_HOST=localhost`；Docker 部署时需要在 compose 中显式设置 `ENV_TDX_API_HOST=0.0.0.0`。
 
 # 4. 检查防火墙
 # Windows防火墙 → 允许Docker
@@ -447,4 +451,3 @@ http://localhost:8080
 **祝您使用愉快！** 🐳🚀📈
 
 有任何问题，请查看 `DOCKER_DEPLOY.md` 或随时反馈！
-

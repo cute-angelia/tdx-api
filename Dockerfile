@@ -33,8 +33,9 @@ FROM alpine:latest
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \
     apk --no-cache add ca-certificates tzdata wget
 
-# 设置时区为上海
-ENV TZ=Asia/Shanghai
+# 设置默认运行环境变量
+ENV TZ=Asia/Shanghai \
+    ENV_TDX_API_PORT=8080
 
 # 创建非root用户
 RUN addgroup -g 1000 appuser && \
@@ -66,7 +67,7 @@ EXPOSE 8080
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
+    CMD sh -c 'wget --no-verbose --tries=1 --spider "http://localhost:${ENV_TDX_API_PORT}/api/health" || exit 1'
 
 # 启动应用
 CMD ["./stock-web"]

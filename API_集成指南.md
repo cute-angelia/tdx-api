@@ -43,6 +43,23 @@ go run .
 - HTTP: `http://localhost:8080`
 - WebSocket: `ws://localhost:8080`
 
+可通过以下环境变量覆盖：
+
+- `ENV_TDX_API_HOST`（默认 `localhost`）
+- `ENV_TDX_API_PORT`
+
+例如：
+
+```bash
+cd web
+ENV_TDX_API_HOST=127.0.0.1 ENV_TDX_API_PORT=9090 go run .
+```
+
+说明：
+
+- 本地直接运行时，默认监听 `localhost:8080`
+- Docker 场景需要显式设置 `ENV_TDX_API_HOST=0.0.0.0`
+
 ### 2. 先做健康检查
 
 ```bash

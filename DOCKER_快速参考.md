@@ -125,18 +125,27 @@ docker ps  # 查看HEALTH列
 
 ## 🌐 访问地址
 
-- **本地访问**: http://localhost:8080
-- **局域网访问**: http://你的IP:8080
+- **默认本地访问**: http://localhost:8080
+- **默认局域网访问**: http://你的IP:8080
+- 如需修改端口，优先使用 `ENV_TDX_API_PORT`
 
 ---
 
 ## ⚙️ 配置修改
 
-### 修改端口（docker-compose.yml）
-```yaml
-ports:
-  - "9090:8080"  # 将8080改为9090
+### 修改端口（推荐用环境变量）
+```powershell
+# Windows PowerShell
+$env:ENV_TDX_API_PORT=9090
+docker-compose up -d
 ```
+
+```bash
+# Linux / macOS
+ENV_TDX_API_PORT=9090 docker-compose up -d
+```
+
+Docker 场景还需要确保容器内设置 `ENV_TDX_API_HOST=0.0.0.0`，否则默认 `localhost` 无法从宿主机访问。
 
 ### 修改时区（docker-compose.yml）
 ```yaml
@@ -202,6 +211,7 @@ docker-compose logs | findstr "error"  # 应该无结果
 4. ✅ 可以访问网页
 ```powershell
 # 浏览器打开: http://localhost:8080
+# 如果设置了 ENV_TDX_API_PORT，请改用对应端口
 ```
 
 ---
@@ -215,7 +225,11 @@ docker-compose restart
 
 ### 端口冲突
 ```powershell
-# 修改docker-compose.yml中的端口
+# 改用其他端口
+$env:ENV_TDX_API_PORT=9090
+docker-compose up -d
+
+# 或停止占用端口的程序
 # 或停止占用端口的程序
 netstat -ano | findstr :8080
 taskkill /PID <进程ID> /F
@@ -289,4 +303,3 @@ Creating tdx-stock-web ... done
 ---
 
 **保存此文档以便快速查阅！** 📌
-

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -754,7 +755,21 @@ func main() {
 	http.HandleFunc("/api/tasks", handleListTasks)
 	http.HandleFunc("/api/tasks/", handleTaskOperations)
 
-	port := ":8080"
-	log.Printf("服务启动成功，访问 http://localhost%s\n", port)
-	log.Fatal(http.ListenAndServe(port, nil))
+	addr := resolveServerAddr()
+	log.Printf("服务启动成功，监听 %s\n", addr)
+	log.Fatal(http.ListenAndServe(addr, nil))
+}
+
+func resolveServerAddr() string {
+	host := strings.TrimSpace(os.Getenv("ENV_TDX_API_HOST"))
+	port := strings.TrimSpace(os.Getenv("ENV_TDX_API_PORT"))
+
+	if _, err := strconv.Atoi(port); err != nil || port == "" {
+		port = "8080"
+	}
+
+	if host == "" {
+		host = "localhost"
+	}
+	return host + ":" + port
 }

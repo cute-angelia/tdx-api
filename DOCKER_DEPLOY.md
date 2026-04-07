@@ -93,7 +93,7 @@ docker-compose up -d
 这个命令会：
 - 📦 自动构建Docker镜像
 - 🚀 启动容器
-- 🔌 映射端口到本机8080
+- 🔌 默认映射端口到本机8080（可通过 `ENV_TDX_API_PORT` 覆盖）
 
 #### 3. 查看日志
 ```powershell
@@ -102,7 +102,7 @@ docker-compose logs -f
 
 # 看到以下信息表示启动成功：
 # 成功连接到通达信服务器
-# 服务启动成功，访问 http://localhost:8080
+# 服务启动成功，监听 :8080
 ```
 
 #### 4. 访问应用
@@ -126,6 +126,7 @@ docker build -t tdx-stock-web:latest .
 ```powershell
 docker run -d \
   --name tdx-stock-web \
+  -e ENV_TDX_API_PORT=8080 \
   -p 8080:8080 \
   --restart unless-stopped \
   tdx-stock-web:latest
@@ -232,12 +233,13 @@ services:
     container_name: tdx-stock-web  # 容器名称
     
     ports:
-      - "8080:8080"          # 端口映射 主机:容器
+      - "${ENV_TDX_API_PORT:-8080}:${ENV_TDX_API_PORT:-8080}"  # 端口映射 主机:容器
     
     restart: unless-stopped   # 重启策略
     
     environment:
       - TZ=Asia/Shanghai     # 时区设置
+      - ENV_TDX_API_PORT=${ENV_TDX_API_PORT:-8080}
     
     networks:
       - stock-network        # 网络配置
@@ -245,11 +247,31 @@ services:
 
 ### 修改端口
 
-如果8080端口被占用，修改`docker-compose.yml`：
+推荐通过环境变量修改端口，而不是直接改死 `docker-compose.yml`：
+
+```bash
+ENV_TDX_API_PORT=9090 docker-compose up -d
+```
+
+变量说明：
+
+- `ENV_TDX_API_PORT`：Docker 部署时推荐配置的服务监听端口，默认 `8080`
+
+当前 `docker-compose.yml` 的端口映射会跟随 `ENV_TDX_API_PORT` 同步变化。
+
+说明：
+
+- 服务端默认 `ENV_TDX_API_HOST=localhost`
+- Docker 场景必须显式设置 `ENV_TDX_API_HOST=0.0.0.0`
+- 对外访问地址应由客户端 Base URL、宿主机 IP、域名或反向代理决定
+
+如果你确实要写死在 `docker-compose.yml` 里，也可以直接改：
 
 ```yaml
 ports:
-  - "9090:8080"  # 将主机端口改为9090
+  - "9090:9090"
+environment:
+  - ENV_TDX_API_PORT=9090
 ```
 
 然后访问：http://localhost:9090
@@ -315,8 +337,7 @@ netstat -ano | findstr :8080
 taskkill /PID <进程ID> /F
 
 # 方法2：修改docker-compose.yml中的端口映射
-ports:
-  - "9090:8080"
+ENV_TDX_API_PORT=9090 docker-compose up -d
 ```
 
 ### 问题4：容器启动后立即退出
@@ -402,7 +423,7 @@ docker top tdx-stock-web
 
 ```yaml
 healthcheck:
-  test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+  test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${ENV_TDX_API_PORT:-8080}/ || exit 1"]
   interval: 30s      # 每30秒检查一次
   timeout: 3s        # 超时时间3秒
   retries: 3         # 失败3次后标记为unhealthy
@@ -470,7 +491,7 @@ docker run -d \
 ```bash
 # .env
 TZ=Asia/Shanghai
-PORT=8080
+ENV_TDX_API_PORT=8080
 LOG_LEVEL=info
 ```
 
@@ -481,7 +502,7 @@ services:
     env_file:
       - .env
     ports:
-      - "${PORT}:8080"
+      - "${ENV_TDX_API_PORT:-8080}:${ENV_TDX_API_PORT:-8080}"
 ```
 
 ### 数据持久化（如需要）
@@ -633,4 +654,3 @@ Docker部署成功后，您可以：
 **祝您部署顺利！** 🐳🚀
 
 有任何问题，请查看故障排查章节或反馈给我。
-

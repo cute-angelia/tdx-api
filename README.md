@@ -33,7 +33,7 @@ cd tdx-api
 # 启动服务（已配置国内镜像加速）
 docker-compose up -d
 
-# 访问 http://localhost:8080
+# 默认访问 http://localhost:8080
 ```
 
 **一键启动脚本：**
@@ -53,10 +53,22 @@ go mod download
 cd web
 go run .
 
-# 3. 访问 http://localhost:8080
+# 3. 默认访问 http://localhost:8080
 ```
 
 > ⚠️ **注意**: 必须使用 `go run .` 编译所有 Go 文件，不能使用 `go run server.go`
+
+可选环境变量：
+
+- `ENV_TDX_API_HOST`：监听地址，默认 `localhost`
+- `ENV_TDX_API_PORT`：监听端口，默认 `8080`
+
+示例：
+
+```bash
+cd web
+ENV_TDX_API_HOST=127.0.0.1 ENV_TDX_API_PORT=9090 go run .
+```
 
 ---
 
