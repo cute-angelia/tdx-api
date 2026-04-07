@@ -1,560 +1,331 @@
-# 📡 API功能完整集成指南
+# 📡 API 集成指南
 
-## 🎯 概述
+## 概述
 
-已为您打包完成所有功能的API接口！所有基础与扩展功能已默认集成，包括：
+这份文档只回答一件事：`怎么把 tdx-api 接进你的系统`。
 
-### ✅ 已实现的基础接口（6个）
-1. **GET /api/quote** - 五档行情
-2. **GET /api/kline** - K线数据
-3. **GET /api/minute** - 分时数据
-4. **GET /api/trade** - 分时成交
-5. **GET /api/search** - 搜索股票
-6. **GET /api/stock-info** - 综合信息
+接口定义、参数细节、返回结构、错误码、版本更新，请统一查：
 
-### ✅ 扩展接口（7个）
-7. **GET /api/codes** - 股票代码列表
-8. **POST /api/batch-quote** - 批量获取行情
-9. **GET /api/kline-history** - 历史K线范围查询
-10. **GET /api/index** - 指数数据
-11. **GET /api/market-stats** - 市场统计
-12. **GET /api/server-status** - 服务状态
-13. **GET /api/health** - 健康检查
+- [API_接口文档.md](API_接口文档.md)
 
-### ✅ 数据入库任务接口（5个）
-14. **POST /api/tasks/pull-kline** - 批量K线入库任务
-15. **POST /api/tasks/pull-trade** - 分时成交入库任务
-16. **GET /api/tasks** - 查询任务列表
-17. **GET /api/tasks/{id}** - 查询任务详情
-18. **POST /api/tasks/{id}/cancel** - 取消任务
+如果文档与代码看起来不一致，建议以当前服务代码为准，并优先检查：
 
-### ✅ 新增数据服务接口（12个）
-19. **GET /api/etf** - ETF基金列表
-20. **GET /api/trade-history** - 历史分时成交分页
-21. **GET /api/minute-trade-all** - 全天分时成交汇总
-22. **GET /api/workday** - 交易日信息查询
-23. **GET /api/market-count** - 各交易所证券数量
-24. **GET /api/stock-codes** - 全部股票代码
-25. **GET /api/etf-codes** - 全部ETF代码
-26. **GET /api/kline-all** - 股票历史K线全集
-27. **GET /api/index/all** - 指数历史K线全集
-28. **GET /api/trade-history/full** - 上市以来分时成交
-29. **GET /api/workday/range** - 交易日范围列表
-30. **GET /api/income** - 收益区间分析
+- `web/server.go`
+- `web/server_api_extended.go`
+- `web/server_ws.go`
 
 ---
 
-## 🚀 如何集成扩展接口
+## 适用场景
 
-> 当前仓库已经完成以下步骤，接口可直接使用；若需要迁移到其他工程或自定义修改，可参考下述说明。
+适合以下接入方式：
 
-### 方法一：合并到现有server.go（推荐）
+- 后端服务拉取行情、K 线、分时、成交数据
+- 前端页面轮询行情或通过 WebSocket 订阅实时行情
+- 量化/分析脚本批量获取股票、ETF、交易日、收益区间数据
+- 本地任务系统触发 K 线或成交入库任务
 
-在 `web/server.go` 的 `main()` 函数中注册路由：
-
-```go
-func main() {
-	// 静态文件服务
-	http.Handle("/", http.FileServer(http.Dir("./static")))
-
-	// === 现有API路由 ===
-	http.HandleFunc("/api/quote", handleGetQuote)
-	http.HandleFunc("/api/kline", handleGetKline)
-	http.HandleFunc("/api/minute", handleGetMinute)
-	http.HandleFunc("/api/trade", handleGetTrade)
-	http.HandleFunc("/api/search", handleSearchCode)
-	http.HandleFunc("/api/stock-info", handleGetStockInfo)
-
-	// === 扩展API路由 ===
-	http.HandleFunc("/api/codes", handleGetCodes)
-	http.HandleFunc("/api/batch-quote", handleBatchQuote)
-	http.HandleFunc("/api/kline-history", handleGetKlineHistory)
-	http.HandleFunc("/api/index", handleGetIndex)
-	http.HandleFunc("/api/index/all", handleGetIndexAll)
-	http.HandleFunc("/api/market-stats", handleGetMarketStats)
-	http.HandleFunc("/api/market-count", handleGetMarketCount)
-	http.HandleFunc("/api/stock-codes", handleGetStockCodes)
-	http.HandleFunc("/api/etf-codes", handleGetETFCodes)
-	http.HandleFunc("/api/server-status", handleGetServerStatus)
-	http.HandleFunc("/api/health", handleHealthCheck)
-	http.HandleFunc("/api/etf", handleGetETFList)
-	http.HandleFunc("/api/trade-history", handleGetTradeHistory)
-	http.HandleFunc("/api/trade-history/full", handleGetTradeHistoryFull)
-	http.HandleFunc("/api/minute-trade-all", handleGetMinuteTradeAll)
-	http.HandleFunc("/api/kline-all", handleGetKlineAll)
-	http.HandleFunc("/api/workday", handleGetWorkday)
-	http.HandleFunc("/api/workday/range", handleGetWorkdayRange)
-	http.HandleFunc("/api/income", handleGetIncome)
-
-	// === 任务调度路由 ===
-	http.HandleFunc("/api/tasks/pull-kline", handleCreatePullKlineTask)
-	http.HandleFunc("/api/tasks/pull-trade", handleCreatePullTradeTask)
-	http.HandleFunc("/api/tasks", handleListTasks)
-	http.HandleFunc("/api/tasks/", handleTaskOperations)
-
-	port := ":8080"
-	log.Printf("服务启动成功，访问 http://localhost%s\n", port)
-	log.Fatal(http.ListenAndServe(port, nil))
-}
-```
-
-### 方法二：复制扩展函数到server.go
-
-需要在其他项目使用时，可将 `server_api_extended.go` 中的函数与工具方法复制到目标项目，并同步注册路由。
+不建议用这份文档替代接口文档。它强调的是“接入策略”，不是“字段字典”。
 
 ---
 
-## 📝 完整集成步骤
+## 快速接入
 
-### 步骤1: 添加扩展接口代码
-
-（示例代码已合并在仓库中，以下片段仅作参考）
-
-```go
-// ==================== 扩展API接口 ====================
-
-// 获取股票代码列表
-func handleGetCodes(w http.ResponseWriter, r *http.Request) {
-	exchange := r.URL.Query().Get("exchange")
-
-	type CodesResponse struct {
-		Total     int                    `json:"total"`
-		Exchanges map[string]int         `json:"exchanges"`
-		Codes     []map[string]string    `json:"codes"`
-	}
-
-	resp := &CodesResponse{
-		Exchanges: make(map[string]int),
-		Codes:     []map[string]string{},
-	}
-
-	exchanges := []protocol.Exchange{}
-	switch strings.ToLower(exchange) {
-	case "sh":
-		exchanges = []protocol.Exchange{protocol.ExchangeSH}
-	case "sz":
-		exchanges = []protocol.Exchange{protocol.ExchangeSZ}
-	case "bj":
-		exchanges = []protocol.Exchange{protocol.ExchangeBJ}
-	default:
-		exchanges = []protocol.Exchange{protocol.ExchangeSH, protocol.ExchangeSZ, protocol.ExchangeBJ}
-	}
-
-	for _, ex := range exchanges {
-		codeResp, err := client.GetCodeAll(ex)
-		if err != nil {
-			continue
-		}
-
-		exName := ""
-		switch ex {
-		case protocol.ExchangeSH:
-			exName = "sh"
-		case protocol.ExchangeSZ:
-			exName = "sz"
-		case protocol.ExchangeBJ:
-			exName = "bj"
-		}
-
-		count := 0
-		for _, v := range codeResp.List {
-			if protocol.IsStock(v.Code) {
-				resp.Codes = append(resp.Codes, map[string]string{
-					"code":     v.Code,
-					"name":     v.Name,
-					"exchange": exName,
-				})
-				count++
-			}
-		}
-		resp.Exchanges[exName] = count
-		resp.Total += count
-	}
-
-	successResponse(w, resp)
-}
-
-// 批量获取行情
-func handleBatchQuote(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		errorResponse(w, "只支持POST请求")
-		return
-	}
-
-	var req struct {
-		Codes []string `json:"codes"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		errorResponse(w, "请求参数错误: "+err.Error())
-		return
-	}
-
-	if len(req.Codes) == 0 {
-		errorResponse(w, "股票代码列表不能为空")
-		return
-	}
-
-	if len(req.Codes) > 50 {
-		errorResponse(w, "一次最多查询50只股票")
-		return
-	}
-
-	quotes, err := client.GetQuote(req.Codes...)
-	if err != nil {
-		errorResponse(w, fmt.Sprintf("获取行情失败: %v", err))
-		return
-	}
-
-	successResponse(w, quotes)
-}
-
-// 健康检查
-func handleHealthCheck(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "healthy",
-		"time":   time.Now().Unix(),
-	})
-}
-
-// ... 其他扩展函数（见server_api_extended.go）
-```
-
-### 步骤2: 添加import依赖
-
-在 `server.go` 顶部的import中确保有：
-
-```go
-import (
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
-	"strconv"      // 新增
-	"strings"      // 新增
-	"time"
-
-	"github.com/injoyai/tdx"
-	"github.com/injoyai/tdx/protocol"
-)
-```
-
-### 步骤3: 重新构建部署（如有修改）
+### 1. 启动服务
 
 ```bash
-# 停止服务
-docker-compose down
-
-# 重新构建
-docker-compose build
-
-# 启动服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
+cd web
+go run .
 ```
 
----
+默认地址：
 
-## 🧪 测试新接口
+- HTTP: `http://localhost:8080`
+- WebSocket: `ws://localhost:8080`
 
-### 测试1: 获取股票代码列表
+### 2. 先做健康检查
 
 ```bash
-# 获取所有股票
-curl "http://localhost:8080/api/codes"
-
-# 只获取上海股票
-curl "http://localhost:8080/api/codes?exchange=sh"
-
-# 只获取深圳股票
-curl "http://localhost:8080/api/codes?exchange=sz"
-```
-
-预期响应：
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "total": 5234,
-    "exchanges": {
-      "sh": 2156,
-      "sz": 2845,
-      "bj": 233
-    },
-    "codes": [
-      {
-        "code": "000001",
-        "name": "平安银行",
-        "exchange": "sz"
-      }
-    ]
-  }
-}
-```
-
-### 测试2: 批量获取行情
-
-```bash
-curl -X POST http://localhost:8080/api/batch-quote \
-  -H "Content-Type: application/json" \
-  -d '{"codes":["000001","600519","601318"]}'
-```
-
-预期响应：
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": [
-    { /* 000001的行情数据 */ },
-    { /* 600519的行情数据 */ },
-    { /* 601318的行情数据 */ }
-  ]
-}
-```
-
-### 测试3: 健康与服务状态
-
-```bash
-curl "http://localhost:8080/api/server-status"
 curl "http://localhost:8080/api/health"
+curl "http://localhost:8080/api/server-status"
 ```
 
----
+如果这两步不通，先不要继续接行情接口。
 
-## 📚 完整API列表
+### 3. 选择你要用的能力
 
-### 基础数据接口
+常见组合：
 
-| 接口 | 方法 | 说明 |
-|-----|------|------|
-| /api/quote | GET | 五档行情 |
-| /api/kline | GET | K线数据（含日/周/月前复权） |
-| /api/minute | GET | 分时数据（自动回退至最近交易日） |
-| /api/trade | GET | 分时成交 |
-| /api/search | GET | 搜索股票（支持代码/名称模糊匹配） |
-| /api/stock-info | GET | 综合信息汇总 |
-
-### 扩展功能接口
-
-| 接口 | 方法 | 说明 |
-|-----|------|------|
-| /api/codes | GET | 股票列表 |
-| /api/batch-quote | POST | 批量行情 |
-| /api/kline-history | GET | 历史K线（limit ≤ 800） |
-| /api/index | GET | 指数数据 |
-| /api/market-stats | GET | 市场统计 |
-| /api/server-status | GET | 服务状态 |
-| /api/health | GET | 健康检查 |
-
-### 静态文件
-
-| 路径 | 说明 | 状态 |
-|-----|------|------|
-| / | Web界面 | ✅ 已实现 |
-| /static/* | 静态资源 | ✅ 已实现 |
+- 看盘概览：`/api/quote` + `/api/minute` + `/api/kline?type=day`
+- 批量监控：`/api/batch-quote`
+- 实时推送：`/ws/quote`
+- 历史分析：`/api/kline-history`、`/api/kline-all`、`/api/index/all`
+- 成交明细：`/api/trade`、`/api/trade-history`、`/api/trade-history/full`
+- 数据准备：`/api/codes`、`/api/stock-codes`、`/api/etf-codes`、`/api/workday`
+- 后台入库：`/api/tasks/pull-kline`、`/api/tasks/pull-trade`
 
 ---
 
-## 🎯 使用场景
+## 接入原则
 
-### 场景1: 量化交易系统
+### 1. 接口定义只看一个地方
+
+不要在多个文档里分别抄接口清单。接入时：
+
+1. 在本文件确认“该用哪类接口”
+2. 去 [API_接口文档.md](API_接口文档.md) 看准确参数和返回结构
+
+### 2. 注意返回单位
+
+这个项目不是所有字段都用常见的“元/股”：
+
+- 价格经常是 `厘`
+- 成交量经常是 `手`
+- 五档挂单量通常是 `股`
+
+对接 UI、风控或指标计算时，先做单位换算，不要直接把原始值当元或股。
+
+### 3. 先分清“结构体返回”还是“自定义 map 返回”
+
+这会直接影响字段名大小写：
+
+- 直接返回 Go 结构体的接口，通常字段是 `Count`、`List`、`Time`、`Price`
+- 手工组装的接口，通常字段是 `count`、`list`、`date`、`meta`
+
+拿不准时，直接查 [API_接口文档.md](API_接口文档.md)。
+
+---
+
+## 推荐超时与重试
+
+### HTTP 请求
+
+推荐客户端超时：
+
+- 普通查询接口：`5-10s`
+- `kline-all` / `index/all`：`10-20s`
+- 同花顺前复权全量接口：建议 `>=10s`
+
+### 重试策略
+
+建议只对这类场景做有限重试：
+
+- 网络抖动
+- 上游瞬时不可用
+- 客户端超时
+
+不建议无脑重试：
+
+- 参数错误
+- 股票代码错误
+- 明确返回业务错误
+
+建议策略：
+
+- 最多重试 `2-3` 次
+- 指数退避，例如 `0.5s / 1s / 2s`
+
+---
+
+## 常见接入方案
+
+### 方案一：前端行情看板
+
+推荐：
+
+- 首屏：用 `/api/stock-info` 或 `/api/quote` + `/api/minute`
+- 自选列表：用 `/api/batch-quote`
+- 高频刷新：优先用 `/ws/quote`
+
+不推荐：
+
+- 前端每只股票分别轮询 `/api/quote`
+
+### 方案二：历史分析脚本
+
+推荐顺序：
+
+1. 用 `/api/stock-codes` 或 `/api/codes` 获取标的池
+2. 用 `/api/workday` 或 `/api/workday/range` 确认交易日
+3. 用 `/api/kline-history` 做区间拉取
+4. 需要全量历史时再用 `/api/kline-all`
+
+### 方案三：逐笔成交研究
+
+推荐：
+
+- 单日分页：`/api/trade-history`
+- 单日全量：`/api/minute-trade-all`
+- 长时间跨度：`/api/trade-history/full`
+
+注意：
+
+- `/api/trade-history/full` 返回的是自定义小写字段结构
+- `price` 在这个接口里是浮点元值，不是文档里很多结构体返回那种原始 `厘`
+
+### 方案四：本地入库任务
+
+流程：
+
+1. `POST /api/tasks/pull-kline` 或 `POST /api/tasks/pull-trade`
+2. 记录返回的 `task_id`
+3. 轮询 `/api/tasks/{task_id}`
+4. 必要时 `POST /api/tasks/{task_id}/cancel`
+
+适合离线准备数据库，不适合给实时前台直接调用。
+
+---
+
+## 代码示例
+
+### Python：查询日 K 线区间
 
 ```python
 import requests
 
-BASE_URL = "http://your-server:8080"
+BASE_URL = "http://localhost:8080"
 
-# 1. 获取所有股票代码
-codes_resp = requests.get(f"{BASE_URL}/api/codes")
-all_codes = [c['code'] for c in codes_resp.json()['data']['codes']]
+resp = requests.get(
+    f"{BASE_URL}/api/kline-history",
+    params={
+        "code": "000001",
+        "type": "day",
+        "start_date": "2024-11-01",
+        "end_date": "2024-11-30",
+        "limit": 100,
+    },
+    timeout=10,
+)
+resp.raise_for_status()
+data = resp.json()["data"]
 
-# 2. 批量获取行情（每次50只）
-for i in range(0, len(all_codes), 50):
-    batch = all_codes[i:i+50]
-    quotes = requests.post(
-        f"{BASE_URL}/api/batch-quote",
-        json={"codes": batch}
-    ).json()['data']
-    
-    # 分析行情数据
-    for quote in quotes:
-        analyze_quote(quote)
-
-# 3. 获取K线进行技术分析
-kline = requests.get(
-    f"{BASE_URL}/api/kline?code=000001&type=day"
-).json()['data']['List']
-
-calculate_ma(kline)  # 计算均线
-calculate_macd(kline)  # 计算MACD
+for item in data["List"]:
+    print(item["Time"], item["Close"])
 ```
 
-### 场景2: 实时监控面板
+### JavaScript：批量获取行情
 
 ```javascript
-// 定时刷新行情
-setInterval(async () => {
-    // 批量获取自选股行情
-    const watchlist = ['000001', '600519', '601318'];
-    const response = await fetch('/api/batch-quote', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({codes: watchlist})
-    });
-    const quotes = await response.json();
-    
-    // 更新界面
-    updateDashboard(quotes.data);
-}, 3000);
+const response = await fetch('http://localhost:8080/api/batch-quote', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    codes: ['000001', '600519', '601318']
+  })
+});
+
+const payload = await response.json();
+console.log(payload.data);
 ```
 
-### 场景3: 数据分析
+### JavaScript：订阅实时行情
+
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws/quote?code=000001,600519&interval=3');
+
+ws.onmessage = (event) => {
+  const payload = JSON.parse(event.data);
+  console.log(payload.data);
+};
+```
+
+### Python：发起入库任务
 
 ```python
-# 获取全市场数据进行分析
-import pandas as pd
+import requests
 
-# 1. 获取所有股票
-codes = get_all_codes()
+BASE_URL = "http://localhost:8080"
 
-# 2. 获取每只股票的日K线
-data = []
-for code in codes:
-    kline = get_kline(code, 'day')
-    df = pd.DataFrame(kline)
-    df['code'] = code
-    data.append(df)
+task = requests.post(
+    f"{BASE_URL}/api/tasks/pull-kline",
+    json={
+        "codes": ["000001", "600519"],
+        "tables": ["day", "week", "month"],
+        "limit": 4,
+        "start_date": "2020-01-01",
+    },
+    timeout=10,
+).json()["data"]
 
-# 3. 合并分析
-all_data = pd.concat(data)
-
-# 4. 筛选涨停股
-limit_up = all_data[all_data['涨跌幅'] >= 9.9]
+task_id = task["task_id"]
+print("task:", task_id)
 ```
 
 ---
 
-## 🔐 安全建议
+## 对接排坑
 
-### 1. 添加认证
+### 1. `/api/kline-history` 现在真的支持日期范围
 
-```go
-func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        token := r.Header.Get("Authorization")
-        if token != "your-secret-token" {
-            errorResponse(w, "未授权")
-            return
-        }
-        next(w, r)
-    }
-}
+当前版本里，`start_date` / `end_date` 已接入过滤逻辑。
 
-// 使用
-http.HandleFunc("/api/quote", authMiddleware(handleGetQuote))
-```
+如果你发现返回结果和预期区间不一致，先检查：
 
-### 2. 限流控制
+- 日期格式是否为 `YYYYMMDD` 或 `YYYY-MM-DD`
+- `limit` 是否把结果又截短了
 
-```go
-import "golang.org/x/time/rate"
+### 2. `/api/minute` 不会自动回退交易日
 
-var limiter = rate.NewLimiter(10, 20) // 每秒10次，突发20次
+如果指定日期没有数据，会返回：
 
-func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        if !limiter.Allow() {
-            errorResponse(w, "请求过于频繁")
-            return
-        }
-        next(w, r)
-    }
-}
-```
+- 原请求日期
+- `Count = 0`
+- `List = []`
 
-### 3. CORS配置
+调用方自己决定是否换日期重试。
 
-```go
-func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Access-Control-Allow-Origin", "*")
-        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        
-        if r.Method == "OPTIONS" {
-            w.WriteHeader(http.StatusOK)
-            return
-        }
-        next(w, r)
-    }
-}
-```
+### 3. `/api/search` 没有结果时不是报错
+
+当前实现是返回空数组，不是“未找到相关股票”的错误。
+
+### 4. 全量接口不要默认给前端直接用
+
+以下接口可能返回很多数据：
+
+- `/api/kline-all`
+- `/api/kline-all/tdx`
+- `/api/kline-all/ths`
+- `/api/index/all`
+- `/api/trade-history/full`
+
+更适合作为：
+
+- 离线分析
+- 后端预处理
+- 定时任务
+
+### 5. 任务接口是异步的
+
+`pull-kline` / `pull-trade` 只是创建任务，不代表任务已经完成。
 
 ---
 
-## 📊 性能优化
+## 生产建议
 
-### 1. 启用gzip压缩
+上线前建议至少补这些能力：
 
-```go
-import "github.com/NYTimes/gziphandler"
-
-http.Handle("/api/", gziphandler.GzipHandler(apiRouter))
-```
-
-### 2. 添加缓存
-
-```go
-var cache = make(map[string]interface{})
-var cacheMux sync.RWMutex
-
-func getCached(key string) (interface{}, bool) {
-    cacheMux.RLock()
-    defer cacheMux.RUnlock()
-    val, ok := cache[key]
-    return val, ok
-}
-
-func setCache(key string, val interface{}) {
-    cacheMux.Lock()
-    defer cacheMux.Unlock()
-    cache[key] = val
-}
-```
+- 认证：如 API Token 或网关鉴权
+- 限流：防止高频轮询压垮服务
+- 超时：客户端和反向代理都设置
+- 监控：记录接口耗时、错误率、任务失败率
+- 缓存：对股票代码、交易日、ETF 列表等低频变化接口做缓存
 
 ---
 
-## 📖 完整文档
+## 文档分工
 
-- **API接口文档**: `API_接口文档.md`
-- **本集成指南**: `API_集成指南.md`
-- **扩展代码**: `web/server_api_extended.go`
+建议长期保持下面这个边界：
 
----
+- [API_接口文档.md](API_接口文档.md)
+  - 定义接口
+  - 定义参数
+  - 定义返回结构
+  - 定义错误码
 
-## ✅ 总结
+- [API_集成指南.md](API_集成指南.md)
+  - 说明怎么接
+  - 说明先调哪些接口
+  - 说明超时、重试、缓存和排坑
+  - 给出典型调用方案
 
-### 已完成
-✅ 26个完整API接口  
-✅ 详细的接口文档  
-✅ 使用示例（Python/JavaScript/cURL）  
-✅ 集成指南  
-✅ 安全和性能建议  
-
-### 使用流程
-1. 阅读 `API_接口文档.md` 了解所有接口
-2. 按照本文档集成扩展接口
-3. 重新构建Docker镜像
-4. 测试接口功能
-5. 开始使用API开发应用
-
----
-
-**现在所有功能都已打包为API接口，可以直接使用！** 🎉
-
+这样两份文档不容易互相漂移。

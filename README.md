@@ -60,49 +60,14 @@ go run .
 
 ---
 
-## API 接口列表
+## API 文档
 
-### 核心接口
+README 不再维护接口清单，避免与实现和示例漂移。
 
-| 接口              | 说明     | 示例                    |
-| ----------------- | -------- | ----------------------- |
-| `/api/quote`      | 五档行情 | `?code=000001`          |
-| `/api/kline`      | K 线数据 | `?code=000001&type=day` |
-| `/api/minute`     | 分时数据 | `?code=000001`          |
-| `/api/trade`      | 分时成交 | `?code=000001`          |
-| `/api/search`     | 搜索股票 | `?keyword=平安`         |
-| `/api/stock-info` | 综合信息 | `?code=000001`          |
-
-### 扩展接口
-
-| 接口                      | 说明                          |
-| ------------------------- | ----------------------------- |
-| `/api/codes`              | 获取股票代码列表              |
-| `/api/batch-quote`        | 批量获取行情                  |
-| `/api/kline-history`      | 历史 K 线数据                 |
-| `/api/kline-all`          | 完整 K 线数据                 |
-| `/api/kline-all/tdx`      | TDX 源 K 线数据               |
-| `/api/kline-all/ths`      | 同花顺源 K 线数据（含前复权） |
-| `/api/index`              | 指数数据                      |
-| `/api/index/all`          | 全部指数数据                  |
-| `/api/market-stats`       | 市场统计                      |
-| `/api/market-count`       | 市场数量统计                  |
-| `/api/stock-codes`        | 股票代码                      |
-| `/api/etf-codes`          | ETF 代码                      |
-| `/api/etf`                | ETF 列表                      |
-| `/api/trade-history`      | 历史成交                      |
-| `/api/trade-history/full` | 完整历史成交                  |
-| `/api/minute-trade-all`   | 全部分时成交                  |
-| `/api/workday`            | 交易日查询                    |
-| `/api/workday/range`      | 交易日范围                    |
-| `/api/income`             | 收益数据                      |
-| `/api/tasks/pull-kline`   | 创建 K 线拉取任务             |
-| `/api/tasks/pull-trade`   | 创建成交拉取任务              |
-| `/api/tasks`              | 任务列表                      |
-| `/api/server-status`      | 服务器状态                    |
-| `/api/health`             | 健康检查                      |
-
-**完整 API 文档**: [API\_接口文档.md](API_接口文档.md)
+- 完整接口定义、请求参数、返回结构、错误码： [API\_接口文档.md](API_接口文档.md)
+- 接入流程、接口组合建议、超时重试、排坑： [API_集成指南.md](API_集成指南.md)
+- 文档分工说明： [API_完成总结.md](API_完成总结.md)
+- 如果你在 Codex 环境里查接口，可结合仓库内 skill： [skills/tdx-api-docs/SKILL.md](skills/tdx-api-docs/SKILL.md)
 
 ---
 
@@ -205,8 +170,8 @@ tdx-api/
 仓库内提供了一个面向 API 文档问答的 skill：
 
 - Skill 路径：`skills/tdx-api-docs/SKILL.md`
-- 适用场景：查询接口是否已实现、参数含义、返回结构、字段单位、HTTP/WebSocket 调用示例
-- 校验顺序：优先看 `API_接口文档.md`，再回查 `web/server.go`、`web/server_api_extended.go`、`web/server_ws.go`
+- 适用场景：查询接口是否已实现、参数含义、返回结构、字段单位、HTTP/WebSocket 调用示例、接入方式建议
+- 校验顺序：优先看 `API_接口文档.md`，涉及接入策略时再看 `API_集成指南.md`，最后回查 `web/server.go`、`web/server_api_extended.go`、`web/server_ws.go`
 
 在支持 skill 的 Codex 环境里，可以直接这样使用：
 
@@ -226,6 +191,8 @@ tdx-api/
 | ----------- | --------------------------------------------- |
 | 原项目      | [injoyai/tdx](https://github.com/injoyai/tdx) |
 | API 文档    | [API\_接口文档.md](API_接口文档.md)           |
+| 集成指南    | [API_集成指南.md](API_集成指南.md)           |
+| 文档说明    | [API_完成总结.md](API_完成总结.md)           |
 | Docker 部署 | [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md)          |
 | Python 示例 | [API\_使用示例.py](API_使用示例.py)           |
 | API Skill   | [skills/tdx-api-docs/SKILL.md](skills/tdx-api-docs/SKILL.md) |
