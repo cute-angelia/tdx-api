@@ -302,7 +302,7 @@ docker logs tdx-stock-web
 # 3. 测试容器内服务
 docker exec tdx-stock-web wget -O- http://localhost:${ENV_TDX_API_PORT:-8080}
 
-说明：服务端默认 `ENV_TDX_API_HOST=localhost`；Docker 部署时需要在 compose 中显式设置 `ENV_TDX_API_HOST=0.0.0.0`。
+说明：服务端本地默认 `ENV_TDX_API_HOST=localhost`；Docker 容器内若未设置该变量，会自动监听 `0.0.0.0`。compose 中保留显式配置只是为了更直观。
 
 # 4. 检查防火墙
 # Windows防火墙 → 允许Docker

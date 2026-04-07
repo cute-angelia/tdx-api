@@ -145,7 +145,7 @@ docker-compose up -d
 ENV_TDX_API_PORT=9090 docker-compose up -d
 ```
 
-Docker 场景还需要确保容器内设置 `ENV_TDX_API_HOST=0.0.0.0`，否则默认 `localhost` 无法从宿主机访问。
+Docker 场景即使未显式设置 `ENV_TDX_API_HOST`，容器内也会自动监听 `0.0.0.0`；在 `docker-compose.yml` 中保留显式配置只是为了更直观。
 
 ### 修改时区（docker-compose.yml）
 ```yaml

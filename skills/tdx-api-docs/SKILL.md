@@ -38,7 +38,7 @@ If the markdown and code disagree, treat the code as the current behavior and sa
 - HTTP base URL: `http://${ENV_TDX_API_HOST}:${ENV_TDX_API_PORT}`
 - WebSocket base URL: `ws://${ENV_TDX_API_HOST}:${ENV_TDX_API_PORT}`
 - Server env vars:
-  - `ENV_TDX_API_HOST`: listen host, default `localhost`
+  - `ENV_TDX_API_HOST`: listen host, local default `localhost`, container default `0.0.0.0`
   - `ENV_TDX_API_PORT`: listen port, default `8080`
 - Unified JSON envelope:
 

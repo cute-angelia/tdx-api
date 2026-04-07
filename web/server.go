@@ -24,6 +24,7 @@ var (
 	taskManager = NewTaskManager()
 	initOnce    sync.Once
 	initErr     error
+	containerDetector = isRunningInContainer
 )
 
 func initializeGlobals() error {
@@ -769,7 +770,21 @@ func resolveServerAddr() string {
 	}
 
 	if host == "" {
-		host = "localhost"
+		if containerDetector() {
+			host = "0.0.0.0"
+		} else {
+			host = "localhost"
+		}
 	}
 	return host + ":" + port
+}
+
+func isRunningInContainer() bool {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	if _, err := os.Stat("/run/.containerenv"); err == nil {
+		return true
+	}
+	return false
 }

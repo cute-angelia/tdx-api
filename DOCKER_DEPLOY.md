@@ -261,8 +261,8 @@ ENV_TDX_API_PORT=9090 docker-compose up -d
 
 说明：
 
-- 服务端默认 `ENV_TDX_API_HOST=localhost`
-- Docker 场景必须显式设置 `ENV_TDX_API_HOST=0.0.0.0`
+- 服务端本地默认 `ENV_TDX_API_HOST=localhost`
+- Docker 容器内若未设置 `ENV_TDX_API_HOST`，会自动使用 `0.0.0.0`
 - 对外访问地址应由客户端 Base URL、宿主机 IP、域名或反向代理决定
 
 如果你确实要写死在 `docker-compose.yml` 里，也可以直接改：

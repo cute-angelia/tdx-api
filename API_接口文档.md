@@ -8,7 +8,7 @@
 **编码**: UTF-8
 
 **服务监听环境变量**:
-- `ENV_TDX_API_HOST`：监听地址，默认 `localhost`
+- `ENV_TDX_API_HOST`：监听地址，本地默认 `localhost`，容器内默认 `0.0.0.0`
 - `ENV_TDX_API_PORT`：监听端口，默认 `8080`
 
 ---
