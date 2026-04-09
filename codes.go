@@ -10,6 +10,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 	"xorm.io/core"
 	"xorm.io/xorm"
@@ -17,6 +18,8 @@ import (
 
 // DefaultCodes 增加单例,部分数据需要通过Codes里面的信息计算
 var DefaultCodes *Codes
+
+var codesUpdateLocks sync.Map
 
 func DialCodes(filename string, op ...client.Option) (*Codes, error) {
 	c, err := DialDefault(op...)
@@ -35,7 +38,7 @@ func NewCodesMysql(c *Client, dsn string) (*Codes, error) {
 	}
 	db.SetMapper(core.SameMapper{})
 
-	return NewCodes(c, db)
+	return NewCodes(c, db, dsn)
 }
 
 func NewCodesSqlite(c *Client, filenames ...string) (*Codes, error) {
@@ -44,6 +47,7 @@ func NewCodesSqlite(c *Client, filenames ...string) (*Codes, error) {
 	defaultFilename := filepath.Join(DefaultDatabaseDir, "codes.db")
 	filename := conv.Default(defaultFilename, filenames...)
 	filename = conv.Select(filename == "", defaultFilename, filename)
+	filename = filepath.Clean(filename)
 
 	//如果文件夹不存在就创建
 	dir, _ := filepath.Split(filename)
@@ -57,10 +61,10 @@ func NewCodesSqlite(c *Client, filenames ...string) (*Codes, error) {
 	db.SetMapper(core.SameMapper{})
 	db.DB().SetMaxOpenConns(1)
 
-	return NewCodes(c, db)
+	return NewCodes(c, db, filename)
 }
 
-func NewCodes(c *Client, db *xorm.Engine) (*Codes, error) {
+func NewCodes(c *Client, db *xorm.Engine, dbKey ...string) (*Codes, error) {
 
 	if err := db.Sync2(new(CodeModel)); err != nil {
 		return nil, err
@@ -85,6 +89,7 @@ func NewCodes(c *Client, db *xorm.Engine) (*Codes, error) {
 	cc := &Codes{
 		Client: c,
 		db:     db,
+		dbKey:  conv.Default("", dbKey...),
 	}
 
 	{ //设置定时器,每天早上9点更新数据
@@ -126,6 +131,7 @@ func NewCodes(c *Client, db *xorm.Engine) (*Codes, error) {
 type Codes struct {
 	*Client                         //客户端
 	db        *xorm.Engine          //数据库实例
+	dbKey     string                //跨实例更新锁Key
 	Map       map[string]*CodeModel //股票缓存
 	list      []*CodeModel          //列表方式缓存
 	exchanges map[string][]string   //交易所缓存
@@ -181,6 +187,9 @@ func (this *Codes) AddExchange(code string) string {
 
 // Update 更新数据,从服务器或者数据库
 func (this *Codes) Update(byDB ...bool) error {
+	unlock := acquireCodesUpdateLock(this.dbKey)
+	defer unlock()
+
 	codes, err := this.GetCodes(len(byDB) > 0 && byDB[0])
 	if err != nil {
 		return err
@@ -197,6 +206,16 @@ func (this *Codes) Update(byDB ...bool) error {
 	//更新时间
 	_, err = this.db.Where("`Key`=?", "codes").Update(&UpdateModel{Time: time.Now().Unix()})
 	return err
+}
+
+func acquireCodesUpdateLock(dbKey string) func() {
+	if dbKey == "" {
+		return func() {}
+	}
+	actual, _ := codesUpdateLocks.LoadOrStore(dbKey, &sync.Mutex{})
+	mu := actual.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
 }
 
 // GetCodes 更新股票并返回结果
